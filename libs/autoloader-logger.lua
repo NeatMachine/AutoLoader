@@ -3,7 +3,8 @@
 
 require("Modes")
 
-local logger = {}
+_G.logger = _G.logger or {}
+local logger = _G.logger
 
 logger.VERBOSITY = { OFF = "off", ERROR = "error", INFO = "info", DEBUG = "debug" }
 local _verbosity_level = {

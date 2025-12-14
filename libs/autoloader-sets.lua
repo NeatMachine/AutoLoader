@@ -7,7 +7,8 @@ local codex = require("autoloader-codex")
 local ok_ext, extdata = pcall(require, "extdata")
 local res = require("resources")
 
-local sets = {}
+_G.sets = _G.sets or {}
+local sets = _G.sets
 
 local _root = sets._root or (windower and windower.addon_path) or "."
 
@@ -391,9 +392,6 @@ function sets.get_weapons()
         }
 
         weapons[id] = weapon
-        log.debug(
-          ("Loaded weapon %d from %s (name=%s)"):format(id, filename, display_name or "nil")
-        )
       else
         log.debug(("Skipping weapon file %s (failed to load)"):format(filename))
       end
@@ -1009,13 +1007,6 @@ local function calculate_auto_sets(level, threshold, beam_k)
       totals = best.totals,
       score  = best.score,
     }
-
-    log.debug(("Auto set (no-write) for %s built. score=%.3f, slots=%d"):
-      format(target_key, best.score, (function(t)
-        local n = 0
-        for _ in pairs(t) do n = n + 1 end
-        return n
-      end)(out_slots)))
   end
 
   return results
@@ -1109,7 +1100,6 @@ local function write_auto_set(setkey, result)
     return false, werr
   end
 
-  log.debug(("Saved auto set %s -> %s"):format(key, path))
   return true, path
 end
 
@@ -1137,8 +1127,6 @@ function sets.generate_auto_sets(level, threshold, beam_k, spacing_s)
       local ok, err = write_auto_set(key, auto_sets[key])
       if not ok then
         log.error(("Writing (%s) failed: %s"):format(tostring(key), tostring(err)))
-      else
-        log.debug(("wrote auto set: %s"):format(tostring(key)))
       end
     end, delay)
   end
@@ -1195,6 +1183,8 @@ function sets.handle_sets_command(cmd)
     equip(sets.naked)
     equip(set)
     log.debug("Equipped set " .. a2)
+  elseif a1 == "clear" then
+    equip(sets.naked)
   elseif a1 == "delete" then
     local result, err = sets.delete(a2)
     if result then
