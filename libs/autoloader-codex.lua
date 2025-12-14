@@ -3,7 +3,8 @@
 
 local res = require("resources")
 
-local codex = {}
+_G.codex = _G.codex or {}
+local codex = _G.codex
 
 codex.CORE_SETS = {
     idle = {
@@ -121,19 +122,25 @@ codex.CASTING_SETS = {
         magical_healing = "blue.magical_healing",
         magical_skill_buff = "blue.magical_skill_buff",
         magical_buff = "blue.magical_buff",
+    },
+    bp         = {
+        default = "bp",
+        acc = "bp.acc",
+        buff_duration = "bp.buff_duration",
+        healing = "bp.healing",
+        buff_mnd = "bp.buff_mnd",
+        debuff = "bp.debuff",
+        debuff_rage = "bp.debuff_rage",
+        magic = "bp.magic",
+        magic_tp = "bp.magic_tp",
+        merit = "bp.merit",
+        physical = "bp.physical",
     }
 }
 
 codex.INSTANT_SPELLS = {
     ["Stun"] = true,
-    ["Blitzstrahl"] = true,
-    ["Frypan"] = true,
-    ["Butt"] = true,
     ["Sudden Lunge"] = true,
-    ["Tail Slap"] = true,
-    ["Temporal Shift"] = true,
-    ["Thunderbolt"] = true,
-    ["Whirl of Rage"] = true,
 }
 
 codex.NON_REFRESHABLE_SPELLS = {
@@ -143,6 +150,40 @@ codex.NON_REFRESHABLE_SPELLS = {
     ["Ice Spikes"] = true,
     ["Blaze Spikes"] = true,
     ["Shock Spikes"] = true,
+}
+
+codex.COR_ROLLS = {
+    ["Corsair's Roll"]    = {lucky = 5, unlucky = 9},
+    ["Ninja Roll"]        = {lucky = 4, unlucky = 8},
+    ["Hunter's Roll"]     = {lucky = 4, unlucky = 8},
+    ["Chaos Roll"]        = {lucky = 4, unlucky = 8},
+    ["Magus's Roll"]      = {lucky = 2, unlucky = 6},
+    ["Healer's Roll"]     = {lucky = 3, unlucky = 7},
+    ["Drachen Roll"]      = {lucky = 4, unlucky = 8},
+    ["Choral Roll"]       = {lucky = 2, unlucky = 6},
+    ["Monk's Roll"]       = {lucky = 3, unlucky = 7},
+    ["Beast Roll"]        = {lucky = 4, unlucky = 8},
+    ["Samurai Roll"]      = {lucky = 2, unlucky = 6},
+    ["Evoker's Roll"]     = {lucky = 5, unlucky = 9},
+    ["Rogue's Roll"]      = {lucky = 5, unlucky = 9},
+    ["Warlock's Roll"]    = {lucky = 4, unlucky = 8},
+    ["Fighter's Roll"]    = {lucky = 5, unlucky = 9},
+    ["Puppet Roll"]       = {lucky = 3, unlucky = 7},
+    ["Gallant's Roll"]    = {lucky = 3, unlucky = 7},
+    ["Wizard's Roll"]     = {lucky = 5, unlucky = 9},
+    ["Dancer's Roll"]     = {lucky = 3, unlucky = 7},
+    ["Scholar's Roll"]    = {lucky = 2, unlucky = 6},
+    ["Naturalist's Roll"] = {lucky = 3, unlucky = 7},
+    ["Runeist's Roll"]    = {lucky = 4, unlucky = 8},
+    ["Bolter's Roll"]     = {lucky = 3, unlucky = 9},
+    ["Caster's Roll"]     = {lucky = 2, unlucky = 7},
+    ["Courser's Roll"]    = {lucky = 3, unlucky = 9},
+    ["Blitzer's Roll"]    = {lucky = 4, unlucky = 9},
+    ["Tactician's Roll"]  = {lucky = 5, unlucky = 8},
+    ["Allies' Roll"]      = {lucky = 3, unlucky = 10},
+    ["Miser's Roll"]      = {lucky = 5, unlucky = 7},
+    ["Companion's Roll"]  = {lucky = 2, unlucky = 10},
+    ["Avenger's Roll"]    = {lucky = 4, unlucky = 8},
 }
 
 function codex.get_base(name)
@@ -600,7 +641,6 @@ codex.SLOT_NAMES = {
     [15] = 'Back'
 }
 
-
 codex.BLUE_MAGIC = {
     UNBRIDLED_SPELLS = S {
         'Absolute Terror',
@@ -820,6 +860,7 @@ codex.BLUE_MAGIC_SETS = {
         STUN_SPELLS = {
             codex.CASTING_SETS.blue.default,
             codex.CASTING_SETS.blue.magical,
+            codex.CASTING_SETS.blue.magical_macc,
             codex.CASTING_SETS.blue.magical_stun,
         },
         HEALING_SPELLS = {
@@ -1060,6 +1101,30 @@ do
     end
 end
 
+codex.DEBUFF_REMOVAL_MAP = {
+    ["Doom"]          = "Cursna",
+    ["Curse"]         = "Cursna",
+    ["Curse II"]      = "Cursna",
+    ["Amnesia"]       = "Amnesna",
+    ["Petrification"] = "Stona",
+    ["Paralysis"]     = "Paralyna",
+    ["Silence"]       = "Silena",
+    ["Disease"]       = "Viruna",
+    ["Plague"]        = "Viruna",
+    ["Blindness"]     = "Blindna",
+    ["Poison"]        = "Poisona",
+}
+
+codex.ABSORB_SPELLS = {
+    "Absorb-STR",
+    "Absorb-VIT",
+    "Absorb-DEX",
+    "Absorb-INT",
+    "Absorb-MND",
+    "Absorb-CHR",
+    "Absorb-AGI",
+    "Absorb-ACC"
+}
 
 codex.STAT_CAP = {
     haste = 25, -- gear haste cap (percent)
@@ -1103,6 +1168,516 @@ codex.LATENTS = {
     "odin:", "sortie:", "odyssey:",    -- event/zone buffs
 
 }
+
+codex.ELEMENT_SPELLS = {
+    fire = {
+        nuke = {
+            "Fire", "Fire II", "Fire III", "Fire IV", "Fire V", "Fire VI"
+        },
+        ga = {
+            "Firaga", "Firaga II", "Firaga III", "Firaja"
+        },
+        ra = {
+            "Fira", "Fira II", "Fira III"
+        },
+        helix = {
+            "Pyrohelix", "Pyrohelix II"
+        },
+        am = {
+            "Flare", "Flare II"
+        },
+        buff = {
+            "Blaze Spikes"
+        },
+        debuff = {
+            "Burn"
+        },
+        en = {
+            "Enfire", "Enfire II"
+        },
+        bar = {
+            "Barfire"
+        },
+        bara = {
+            "Barfira"
+        },
+        storm = {
+            "Firestorm"
+        },
+        qd = {
+            "Fire Shot"
+        },
+        spirit = {
+            "Fire Spirit"
+        },
+        maneuver = {
+            "Fire Maneuver"
+        }
+    },
+
+    ice = {
+        nuke = {
+            "Blizzard", "Blizzard II", "Blizzard III", "Blizzard IV", "Blizzard V", "Blizzard VI"
+        },
+        ga = {
+            "Blizzaga", "Blizzaga II", "Blizzaga III", "Blizzaja"
+        },
+        ra = {
+            "Blizzara", "Blizzara II", "Blizzara III"
+        },
+        helix = {
+            "Cryohelix", "Cryohelix II"
+        },
+        am = {
+            "Freeze", "Freeze II"
+        },
+        buff = {
+            "Ice Spikes"
+        },
+        debuff = {
+            "Frost"
+        },
+        en = {
+            "Enblizzard", "Enblizzard II"
+        },
+        bar = {
+            "Barblizzard"
+        },
+        bara = {
+            "Barblizzara"
+        },
+        storm = {
+            "Hailstorm"
+        },
+        qd = {
+            "Ice Shot"
+        },
+        spirit = {
+            "Ice Spirit"
+        },
+        maneuver = {
+            "Ice Maneuver"
+        }
+    },
+
+    wind = {
+        nuke = {
+            "Aero", "Aero II", "Aero III", "Aero IV", "Aero V", "Aero VI"
+        },
+        ga = {
+            "Aeroga", "Aeroga II", "Aeroga III", "Aeroja"
+        },
+        ra = {
+            "Aerora", "Aerora II", "Aerora III"
+        },
+        helix = {
+            "Anemohelix", "Anemohelix II"
+        },
+        am = {
+            "Tornado", "Tornado II"
+        },
+        buff = {
+            "Blink"
+        },
+        debuff = {
+            "Choke"
+        },
+        en = {
+            "Enaero", "Enaero II"
+        },
+        bar = {
+            "Baraero"
+        },
+        bara = {
+            "Baraera"
+        },
+        storm = {
+            "Windstorm"
+        },
+        qd = {
+            "Wind Shot"
+        },
+        spirit = {
+            "Air Spirit"
+        },
+        maneuver = {
+            "Wind Maneuver"
+        }
+    },
+
+    earth = {
+        nuke = {
+            "Stone", "Stone II", "Stone III", "Stone IV", "Stone V", "Stone VI"
+        },
+        ga = {
+            "Stonega", "Stonega II", "Stonega III", "Stoneja"
+        },
+        ra = {
+            "Stonera", "Stonera II", "Stonera III"
+        },
+        helix = {
+            "Geohelix", "Geohelix II"
+        },
+        am = {
+            "Quake", "Quake II"
+        },
+        buff = {
+            "Stoneskin"
+        },
+        debuff = {
+            "Rasp"
+        },
+        en = {
+            "Enstone", "Enstone II"
+        },
+        bar = {
+            "Barstone"
+        },
+        bara = {
+            "Barstonra"
+        },
+        storm = {
+            "Sandstorm"
+        },
+        qd = {
+            "Earth Shot"
+        },
+        spirit = {
+            "Earth Spirit"
+        },
+        maneuver = {
+            "Earth Maneuver"
+        }
+    },
+
+    thunder = {
+        nuke = {
+            "Thunder", "Thunder II", "Thunder III", "Thunder IV", "Thunder V", "Thunder VI"
+        },
+        ga = {
+            "Thundaga", "Thundaga II", "Thundaga III", "Thundaja"
+        },
+        ra = {
+            "Thundara", "Thundara II", "Thundara III"
+        },
+        helix = {
+            "Ionohelix", "Ionohelix II"
+        },
+        am = {
+            "Burst", "Burst II"
+        },
+        buff = {
+            "Shock Spikes"
+        },
+        debuff = {
+            "Shock"
+        },
+        en = {
+            "Enthunder", "Enthunder II"
+        },
+        bar = {
+            "Barthunder"
+        },
+        bara = {
+            "Barthundera"
+        },
+        storm = {
+            "Thunderstorm"
+        },
+        qd = {
+            "Thunder Shot"
+        },
+        spirit = {
+            "Thunder Spirit"
+        },
+        maneuver = {
+            "Thunder Maneuver"
+        }
+    },
+
+    water = {
+        nuke = {
+            "Water", "Water II", "Water III", "Water IV", "Water V", "Water VI"
+        },
+        ga = {
+            "Waterga", "Waterga II", "Waterga III", "Waterja"
+        },
+        ra = {
+            "Watera", "Watera II", "Watera III"
+        },
+        helix = {
+            "Hydrohelix", "Hydrohelix II"
+        },
+        am = {
+            "Flood", "Flood II"
+        },
+        buff = {
+            "Aquaveil"
+        },
+        debuff = {
+            "Drown"
+        },
+        en = {
+            "Enwater", "Enwater II"
+        },
+        bar = {
+            "Barwater"
+        },
+        bara = {
+            "Barwatera"
+        },
+        storm = {
+            "Rainstorm"
+        },
+        qd = {
+            "Water Shot"
+        },
+        spirit = {
+            "Water Spirit"
+        },
+        maneuver = {
+            "Water Maneuver"
+        }
+    },
+
+    light = {
+        nuke = {
+            "Banish", "Banish II", "Holy", "Banish III"
+        },
+        ga = {
+            "Banishga", "Banishga II"
+        },
+        helix = {
+            "Luminohelix", "Luminohelix II"
+        },
+        buff = {
+            "Reprisal"
+        },
+        debuff = {
+            "Dia", "Dia II", "Dia III"
+        },
+        en = {
+            "Enlight", "Enlight II"
+        },
+        storm = {
+            "Aurorastorm"
+        },
+        qd = {
+            "Light Shot"
+        },
+        spirit = {
+            "Light Spirit"
+        },
+        maneuver = {
+            "Light Maneuver"
+        }
+    },
+
+    dark = {
+        nuke = {
+            "Impact"
+        },
+        ga = {
+            "Comet"
+        },
+        helix = {
+            "Noctohelix", "Noctohelix II"
+        },
+        buff = {
+            "Dread Spikes"
+        },
+        debuff = {
+            "Bio", "Bio II", "Bio III"
+        },
+        en = {
+            "Endark", "Endark II"
+        },
+        storm = {
+            "Voidstorm"
+        },
+        qd = {
+            "Dark Shot"
+        },
+        spirit = {
+            "Dark Spirit"
+        },
+        maneuver = {
+            "Dark Maneuver"
+        }
+    },
+}
+
+codex.STATUS_SPELLS = {
+    amnesia = {
+        debuff = {
+
+        },
+        ga = {
+
+        },
+        rm = {
+
+        },
+        bar = {
+            "Baramnesia"
+        },
+        bara = {
+            "Baramnesra"
+        }
+    },
+    blind = {
+        debuff = {
+            "Blind", "Blind II"
+        },
+        ga = {
+        },
+        rm = {
+            "Blindna"
+        },
+        bar = {
+            "Barblind"
+        },
+        bara = {
+            "Barblindra"
+        }
+    },
+    curse = {
+        rm = {
+            "Cursna"
+        }
+    },
+    silence = {
+        debuff = {
+            "Silence"
+        },
+        ga = {
+
+        },
+        rm = {
+            "Silena"
+        },
+        bar = {
+            "Barsilence"
+        },
+        bara = {
+            "Barsilencera"
+        }
+    },
+    paralysis = {
+        debuff = {
+            "Paralyze", "Paralyze II"
+        },
+        ga = {
+
+        },
+        rm = {
+            "Paralyna"
+        },
+        bar = {
+            "Barparalyze"
+        },
+        bara = {
+            "Barparalyzra"
+        }
+    },
+    petrification = {
+        debuff = {
+            "Break"
+        },
+        ga = {
+            "Breakga"
+        },
+        rm = {
+            "Stona"
+        },
+        bar = {
+            "Barpetrify"
+        },
+        bara = {
+            "Barpetra"
+        }
+    },
+    plague = {
+        debuff = {
+
+        },
+        ga = {
+
+        },
+        rm = {
+            "Viruna"
+        },
+        bar = {
+            "Barvirus"
+        },
+        bara = {
+            "Barvira"
+        }
+    },
+    poison = {
+        debuff = {
+            "Poison", "Poison II"
+        },
+        ga = {
+            "Poisonga"
+        },
+        rm = {
+            "Poisona"
+        },
+        bar = {
+            "Barpoison"
+        },
+        bara = {
+            "Barpoisonra"
+        }
+    },
+    sleep = {
+        debuff = {
+            "Sleep", "Sleep II"
+        },
+        ga = {
+            "Sleepga", "Sleepga II"
+        },
+        rm = {
+        },
+        bar = {
+            "Barsleep"
+        },
+        bara = {
+            "Barsleepra"
+        }
+    }
+}
+
+codex.BLOOD_PACT_SETS = {
+    [codex.CASTING_SETS.bp.buff_duration] = { 'Shining Ruby', 'Aerial Armor', 'Frost Armor', 'Rolling Thunder', 'Crimson Howl', 'Lightning Armor', 'Ecliptic Growl', 'Glittering Ruby', 'Earthen Ward', 'Hastega', 'Noctoshield', 'Ecliptic Howl', 'Dream Shroud', 'Earthen Armor', 'Fleet Wind', 'Inferno Howl', 'Heavenward Howl', 'Hastega II', 'Soothing Current', 'Crystal Blessing', 'Katabatic Blades' },
+    [codex.CASTING_SETS.bp.healing] = { 'Healing Ruby', 'Healing Ruby II', 'Whispering Wind', 'Spring Water' },
+    [codex.CASTING_SETS.bp.buff_mnd] = { "Wind's Blessing" },
+    [codex.CASTING_SETS.bp.debuff] = { 'Mewing Lullaby', 'Eerie Eye', 'Lunar Cry', 'Lunar Roar', 'Nightmare', 'Pavor Nocturnus', 'Ultimate Terror', 'Somnolence', 'Slowga', 'Tidal Roar', 'Diamond Storm', 'Sleepga', 'Shock Squall', 'Bitter Elegy', 'Lunatic Voice' },
+    [codex.CASTING_SETS.bp.debuff_rage] = { 'Moonlit Charge', 'Tail Whip' },
+
+    [codex.CASTING_SETS.bp.magic] = { 'Holy Mist', 'Nether Blast', 'Aerial Blast', 'Searing Light', 'Diamond Dust', 'Earthen Fury', 'Zantetsuken', 'Tidal Wave', 'Judgment Bolt', 'Inferno', 'Howling Moon', 'Ruinous Omen', 'Night Terror', 'Thunderspark', 'Tornado II', 'Sonic Buffet' },
+    [codex.CASTING_SETS.bp.magic_tp] = { 'Impact', 'Conflag Strike', 'Level ? Holy', 'Lunar Bay', "Fire II", "Fire IV", "Blizzard II", "Blizzard IV", "Aero II", "Aero IV", "Stone II", "Stone IV", "Thunder II", "Thunder IV", "Water II", "Water IV" },
+    [codex.CASTING_SETS.bp.merit] = { 'Meteor Strike', 'Geocrush', 'Grand Fall', 'Wind Blade', 'Heavenly Strike', 'Thunderstorm' },
+    [codex.CASTING_SETS.bp.physical] = { 'Rock Buster', 'Mountain Buster', 'Crescent Fang', 'Spinning Dive', 'Roundhouse' }
+}
+
+function codex.get_blood_pact_set(spell_name)
+    if type(spell_name) ~= "string" then
+        return codex.CASTING_SETS.bp.default
+    end
+
+    for category, list in pairs(codex.BLOOD_PACT_SETS) do
+        for i = 1, #list do
+            local bp_set = codex.CASTING_SETS.bp[category]
+            if list[i] == spell_name and bp_set then
+                return bp_set
+            end
+        end
+    end
+
+    return codex.CASTING_SETS.bp.default
+end
 
 -- =========================
 -- DARK MAGIC
@@ -1845,7 +2420,6 @@ codex.WEAPON_SKILLS = {
     },
 }
 
-
 function codex.get_spell_name(name)
     if not res or not res.spells then return nil end
     local s = res.spells:with('en', name); return s and s.id or nil
@@ -1876,7 +2450,7 @@ function codex.player_can_cast(name)
     -- 1) Resolve the spell from resources by English name.
     --    Use both 'en' and 'enl' to be forgiving about numerals, etc.
     local spell = res.spells:with('en', name)
-                or res.spells:with('enl', name)
+        or res.spells:with('enl', name)
     if not spell then
         return false, nil, "not_found"
     end
@@ -1886,20 +2460,20 @@ function codex.player_can_cast(name)
         return false, spell, "no_player"
     end
 
-    local main_id   = player.main_job_id
-    local sub_id    = player.sub_job_id
-    local main_lvl  = player.main_job_level
-    local sub_lvl   = player.sub_job_level
+    local main_id     = player.main_job_id
+    local sub_id      = player.sub_job_id
+    local main_lvl    = player.main_job_level
+    local sub_lvl     = player.sub_job_level
 
     -- 2) Check job + level requirement using the levels table from res.spells.
     --    Example from spells.lua:
     --    levels = { [3]=45, [7]=37, [22]=45 } for Flash, etc. :contentReference[oaicite:1]{index=1}
-    local req_main = spell.levels and spell.levels[main_id]
-    local req_sub  = spell.levels and spell.levels[sub_id]
+    local req_main    = spell.levels and spell.levels[main_id]
+    local req_sub     = spell.levels and spell.levels[sub_id]
 
     local meets_level =
         (req_main and main_lvl >= req_main) or
-        (req_sub  and sub_lvl  >= req_sub)
+        (req_sub and sub_lvl >= req_sub)
 
     if not meets_level then
         return false, spell, "job_or_level"
@@ -1943,5 +2517,86 @@ function codex.player_can_cast(name)
     return true, spell, nil
 end
 
+function codex.get_spell_downgrade(name)
+    if type(name) ~= "string" then
+        return nil
+    end
+
+    name = name:match("^%s*(.-)%s*$")
+
+    local base, numeral = name:match("^(.-)%s+([IVX]+)$")
+    if not numeral then return nil end
+
+    local function roman_to_int(r)
+        local map = { I = 1, II = 2, III = 3, IV = 4, V = 5, VI = 6, VII = 7, VIII = 8, IX = 9, X = 10, XI = 11 }
+        local total, prev = 0, 0
+
+        for i = #r, 1, -1 do
+            local c = r:sub(i, i)
+            local v = map[c]
+            if not v then
+                return nil
+            end
+            if v < prev then
+                total = total - v
+            else
+                total = total + v
+            end
+            prev = v
+        end
+
+        return total
+    end
+
+    local function int_to_roman(n)
+        if n <= 0 then
+            return nil
+        end
+
+        local parts = {
+            { 11, "XI" },
+            { 10, "X" },
+            { 9,  "IX" },
+            { 8,  "VIII" },
+            { 7,  "VII" },
+            { 6,  "VI" },
+            { 5,  "V" },
+            { 4,  "IV" },
+            { 3,  "III" },
+            { 2,  "II" },
+            { 1,  "I" },
+        }
+
+        local res = ""
+        for _, p in ipairs(parts) do
+            local val, sym = p[1], p[2]
+            while n >= val do
+                res = res .. sym
+                n = n - val
+            end
+        end
+        return res
+    end
+
+    local lvl = roman_to_int(numeral)
+    if not lvl then
+        return nil
+    end
+
+    local new_lvl = lvl - 1
+
+    base = base:match("^(.-)%s*$") or ""
+
+    if new_lvl <= 1 then
+        return (base ~= "" and base) or nil
+    end
+
+    local new_numeral = int_to_roman(new_lvl)
+    if not new_numeral then
+        return (base ~= "" and base) or nil
+    end
+
+    return base .. " " .. new_numeral
+end
 
 return codex

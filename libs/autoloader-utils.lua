@@ -3,14 +3,15 @@
 
 require("lists")
 
-local utils = {}
+_G.utils = _G.utils or {}
+local utils = _G.utils
 
 function utils.now()
-    local socket = rawget(_G, "socket")
-    if socket and type(socket.gettime) == "function" then
-        return socket.gettime()
-    end
-    return os.clock()
+  local socket = rawget(_G, "socket")
+  if socket and type(socket.gettime) == "function" then
+    return socket.gettime()
+  end
+  return os.clock()
 end
 
 function utils.call_hook(name, stub, ...)
@@ -34,28 +35,89 @@ function utils.get_keys(map)
   return keys
 end
 
+function utils.pretty_time(ticks)
+  local seconds = (tonumber(ticks) and tonumber(ticks) / 60) or 0
+  if seconds < 0 then
+    seconds = 0
+  end
+
+  seconds       = math.floor(seconds)
+
+  local hours   = math.floor(seconds / 3600)
+  local minutes = math.floor((seconds % 3600) / 60)
+  local secs    = seconds % 60
+
+  if hours > 0 then
+    return string.format("%02d:%02d:%02d", hours, minutes, secs)
+  else
+    return string.format("%02d:%02d", minutes, secs)
+  end
+end
+
+local _mode_display_names = {
+  ["default"] = "Default",
+  ["dt"] = "DT",
+  ["mdt"] = "MDT",
+  ["acc"] = "Accuracy",
+  ["sb"] = "Subtle Blow",
+  ["mb"] = "Magic Burst",
+  ["on"] = "On",
+  ["off"] = "Off",
+}
+
+local _unpack = table.unpack or unpack
+function utils.insert_mode_option(mode, value, index, display)
+  if not mode or type(mode.options) ~= "function" then
+    return
+  end
+  if not value then
+    return
+  end
+
+  index = tonumber(index) or (#mode + 1)
+  if index < 1 then
+    index = 1
+  end
+
+  local opts = {}
+  for i = 1, #mode do
+    opts[i] = mode[i]
+  end
+
+  if index > #opts + 1 then
+    index = #opts + 1
+  end
+
+  table.insert(opts, index, value)
+  mode:options(_unpack(opts))
+
+  if display then
+    _mode_display_names[value] = display
+  end
+end
+
 function utils.get_keys_sorted(map)
   return utils.get_keys(map):sort()
 end
 
 function utils.echo(msg)
-    windower.send_command("input /echo " .. msg)
+  windower.send_command("input /echo " .. msg)
 end
 
-local _mode_display_names = {
-    ["default"] = "Default",
-    ["dt"] = "DT",
-    ["mdt"] = "MDT",
-    ["acc"] = "Accuracy",
-    ["sb"] = "Subtle Blow",
-    ["mb"] = "Magic Burst",
-    ["on"] = "On",
-    ["off"] = "Off",
-}
+function utils.capitalize_words(s)
+  if type(s) ~= "string" then
+    return s
+  end
+  s = s:lower()
+  s = s:gsub("(%S)(%S*)", function(first, rest)
+    return first:upper() .. rest
+  end)
 
+  return s
+end
 
 function utils.pretty_mode_value(value)
-    return _mode_display_names[value] or value
+  return _mode_display_names[value] or value
 end
 
 function utils.split3_by_dot(s)
@@ -294,7 +356,6 @@ function utils.wait_for_file(path, timeout_s, poll_s, on_found, on_timeout)
 
   step()
 end
-
 
 function utils.atomic_write(dst, bytes)
   dst = tostring(dst or "")

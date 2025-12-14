@@ -1,9 +1,8 @@
 -- SPDX-License-Identifier: BSD-3-Clause
 -- Copyright (c) 2025 NeatMachine
 
-
-
-local autoloader = {}
+_G.autoloader = _G.autoloader or {}
+local autoloader = _G.autoloader
 
 require("Modes")
 require("lists")
@@ -16,6 +15,7 @@ local log                      = require("autoloader-logger")
 
 autoloader.default_weapon_id   = 1
 autoloader.lockstyle           = nil
+autoloader.macro_book          = nil
 autoloader.idle_refresh        = nil
 autoloader.auto_movement       = false
 autoloader.idle_mode           = "default"
@@ -25,17 +25,125 @@ autoloader.use_auto_sets       = true
 autoloader.auto_sets_threshold = 0.025
 
 local _idle_mode               = M { ["description"] = "Idle", "default", "dt", "mdt" }
-local _melee_mode              = M { ["description"] = "Melee", "default", "acc", "dt", "mdt", "sb", "off" }
+local _melee_mode              = M { ["description"] = "Melee", "default", "acc", "dt", "mdt", "off" }
 local _magic_mode              = M { ["description"] = "Magic", "default", "acc", "mb" }
 local _auto_movement_mode      = M { ["description"] = "Movement", "off", "on" }
+local _auto_exp_mode           = M { ["description"] = "Experience Points", "off", "on" }
 
 local _weapons                 = {}
 local _current_weapon_id       = autoloader.default_weapon_id
 local _keybinds                = {}
 
+autoloader._last_main_job_id     = autoloader._last_main_job_id or nil
+autoloader._last_sub_job_id      = autoloader._last_sub_job_id or nil
+autoloader._last_lockstyle_time  = autoloader._last_lockstyle_time or 0
+autoloader.lockstyle_cooldown    = autoloader.lockstyle_cooldown or 20
+
 function autoloader.register_keybind(key, bind)
     if key and type(key) == "string" and bind and type(bind) == "string" then
         _keybinds[key] = bind
+    end
+end
+
+function autoloader.equip_lock(set)
+    if set then
+        if set.main and set.main ~= "" then
+            disable("main")
+        end
+        if set.sub and set.sub ~= "" then
+            disable("sub")
+        end
+        if set.ranged and set.ranged ~= "" then
+            disable("ranged")
+        end
+        if set.ammo and set.ammo ~= "" then
+            disable("ammo")
+        end
+        if set.body and set.body ~= "" then
+            disable("body")
+        end
+        if set.hands and set.hands ~= "" then
+            disable("hands")
+        end
+        if set.legs and set.legs ~= "" then
+            disable("legs")
+        end
+        if set.feet and set.feet ~= "" then
+            disable("feet")
+        end
+        if set.back and set.back ~= "" then
+            disable("back")
+        end
+        if set.left_ring and set.left_ring ~= "" then
+            disable("left_ring")
+        end
+        if set.right_ring and set.right_ring ~= "" then
+            disable("right_ring")
+        end
+        if set.left_ear and set.left_ear ~= "" then
+            disable("left_ear")
+        end
+        if set.right_ear and set.right_ear ~= "" then
+            disable("right_ear")
+        end
+        if set.neck and set.neck ~= "" then
+            disable("neck")
+        end
+        if set.waist and set.waist ~= "" then
+            disable("waist")
+        end
+
+    autoloader.equip_clean(set)
+    end
+end
+
+function autoloader.unlock(set)
+    if set then
+        if set.main and set.main ~= "" then
+            enable("main")
+        end
+        if set.sub and set.sub ~= "" then
+            enable("sub")
+        end
+        if set.ranged and set.ranged ~= "" then
+            enable("ranged")
+        end
+        if set.ammo and set.ammo ~= "" then
+            enable("ammo")
+        end
+        if set.body and set.body ~= "" then
+            enable("body")
+        end
+        if set.hands and set.hands ~= "" then
+            enable("hands")
+        end
+        if set.legs and set.legs ~= "" then
+            enable("legs")
+        end
+        if set.feet and set.feet ~= "" then
+            enable("feet")
+        end
+        if set.back and set.back ~= "" then
+            enable("back")
+        end
+        if set.left_ring and set.left_ring ~= "" then
+            enable("left_ring")
+        end
+        if set.right_ring and set.right_ring ~= "" then
+            enable("right_ring")
+        end
+        if set.left_ear and set.left_ear ~= "" then
+            enable("left_ear")
+        end
+        if set.right_ear and set.right_ear ~= "" then
+            enable("right_ear")
+        end
+        if set.neck and set.neck ~= "" then
+            enable("neck")
+        end
+        if set.waist and set.waist ~= "" then
+            enable("waist")
+        end
     end
 end
 
@@ -88,6 +196,33 @@ local function try_set_mode(mode, value)
     return true, nil
 end
 
+local _registered_idle_modes = 0
+function autoloader.register_idle_mode(value, display)
+    if value then
+        local index = #_idle_mode + 1 + _registered_idle_modes -- Add to end
+        utils.insert_mode_option(_idle_mode, value, index, display)
+        _registered_idle_modes = _registered_idle_modes + 1
+    end
+end
+
+local _registered_melee_modes = 0
+function autoloader.register_melee_mode(value, display)
+    if value then
+        local index = #_melee_mode + _registered_melee_modes -- Before Off
+        utils.insert_mode_option(_melee_mode, value, index, display)
+        _registered_melee_modes = _registered_melee_modes + 1
+    end
+end
+
+local _registered_magic_modes = 0
+function autoloader.register_magic_mode(value, display)
+    if value then
+        local index = #_magic_mode + 1 + _registered_magic_modes -- Add to end
+        utils.insert_mode_option(_magic_mode, value, index, display)
+        _registered_magic_modes = _registered_magic_modes + 1
+    end
+end
+
 local moving = false
 local _last_move_check, _last_x, _last_y = nil, nil, nil
 local function movement_poll(now)
@@ -124,13 +259,57 @@ local function movement_poll(now)
     end
 end
 
+local exp_mode = false
+local _last_exp_check = nil
+local function exp_poll(now)
+    if _last_exp_check == nil or now - _last_exp_check > 2 then
+        _last_exp_check = now
+    else
+        return
+    end
+
+    local jobpoints = nil
+    if player and player.index and windower.ffxi.get_mob_by_index(player.index) then
+        jobpoints = windower.ffxi.get_player().job_points[player.main_job:lower()].jp_spent -- check if we are master
+    end
+
+    if jobpoints ~= 2100 and jobpoints ~= nil then -- Basically if not master
+        local monsterToCheck = windower.ffxi.get_mob_by_target('t')
+        if windower.ffxi.get_mob_by_target('t') then -- Sanity Check 
+            if #monsterToCheck.name:split(' ') >= 2 then
+                local monsterName = T(monsterToCheck.name:split(' '))
+                if monsterName[1] == "Apex" then
+                    if not exp_mode and monsterToCheck.hpp < 35 then --Check mobs HP Percentage if below 35vthen equip CP cape 
+                        autoloader.equip_clean({back = "Mecistopins Mantle"})
+                        disable("back") --Lock back
+                        exp_mode = true
+                    elseif exp_mode then
+                        exp_mode = false
+                        enable("back") --Else make sure the back is enabled
+                    end
+                end
+            end
+        elseif exp_mode then
+            exp_mode = false
+            enable("back") --Else make sure the back is enabled
+        end
+    elseif exp_mode then
+        exp_mode = false
+        enable("back") --Else make sure the back is enabled
+    end
+end
 
 local _polling_functions = {
     movement = {
         key = "movement_polling",
         interval = 1.0,
         fn = movement_poll
-    }
+    },
+    exp = {
+        key = "exp_polling",
+        interval = 2.0,
+        fn = exp_poll
+    },
 }
 
 local poll = {}
@@ -212,6 +391,19 @@ local function update_movement_polling()
     end
 end
 
+local function update_exp_polling()
+    local exp_poll_def = _polling_functions.exp
+    if not exp_poll_def then return end
+
+    if _auto_exp_mode.current == "on" then
+        log.debug("Ensuring registration for " .. exp_poll_def.key)
+        autoloader.poll.ensure_registration(exp_poll_def.key, exp_poll_def.interval, exp_poll_def.fn)
+    else
+        autoloader.poll.unregister(exp_poll_def.key)
+        log.debug("Unregistered " .. exp_poll_def.key)
+    end
+end
+
 function autoloader.set_movement_mode(value)
     local ok, err = try_set_mode(_auto_movement_mode, value)
     if not ok then
@@ -221,10 +413,26 @@ function autoloader.set_movement_mode(value)
     update_movement_polling()
 end
 
+function autoloader.set_exp_mode(value)
+    local ok, err = try_set_mode(_auto_exp_mode, value)
+    if not ok then
+        log.error(err); return
+    end
+    log.info(("EXP Polling: %s"):format(utils.pretty_mode_value(_auto_exp_mode.current)))
+    update_exp_polling()
+end
+
+
 local function cycle_movement_mode()
     _auto_movement_mode:cycle()
     log.info(("Movement Polling: %s"):format(utils.pretty_mode_value(_auto_movement_mode.current)))
     update_movement_polling()
+end
+
+local function cycle_exp_mode()
+    _auto_exp_mode:cycle()
+    log.info(("EXP Polling: %s"):format(utils.pretty_mode_value(_auto_exp_mode.current)))
+    update_exp_polling()
 end
 
 function autoloader.set_idle_mode(value)
@@ -236,27 +444,38 @@ function autoloader.set_idle_mode(value)
     autoloader.status_refresh()
 end
 
-local function cycle_idle_mode()
+local function cycle_idle_mode(back)
     log.debug("Cycling idle.")
-    _idle_mode:cycle()
+    if back == true then
+        _idle_mode:cycleback()
+    else
+        _idle_mode:cycle()
+    end
     utils.echo("Idle: " .. utils.pretty_mode_value(autoloader.get_current_idle_mode()))
     autoloader.status_refresh()
 end
+
 function autoloader.get_current_idle_mode()
     return _idle_mode.current
 end
 
-function autoloader.set_melee_mode(value)
+function autoloader.set_melee_mode(value, display_off)
     local ok, err = try_set_mode(_melee_mode, value)
     if not ok then
         log.error(err); return
     end
-    utils.echo("Melee: " .. utils.pretty_mode_value(autoloader.get_current_melee_mode()))
+    if not display_off then
+        utils.echo("Melee: " .. utils.pretty_mode_value(autoloader.get_current_melee_mode()))
+    end
     autoloader.status_refresh()
 end
 
-local function cycle_melee_mode()
-    _melee_mode:cycle()
+local function cycle_melee_mode(back)
+    if back == true then
+        _melee_mode:cycleback()
+    else
+        _melee_mode:cycle()
+    end
     utils.echo("Melee: " .. utils.pretty_mode_value(autoloader.get_current_melee_mode()))
     autoloader.status_refresh()
 end
@@ -271,8 +490,12 @@ function autoloader.set_magic_mode(value)
     autoloader.status_refresh()
 end
 
-local function cycle_magic_mode()
-    _magic_mode:cycle()
+local function cycle_magic_mode(back)
+    if back == true then
+        _magic_mode:cycleback()
+    else
+        _magic_mode:cycle()
+    end
     utils.echo("Magic: " .. utils.pretty_mode_value(autoloader.get_current_magic_mode()))
     autoloader.status_refresh()
 end
@@ -508,14 +731,14 @@ local function get_ordered_midcast_set_names(spell)
 
         local predefined_sets = spell.english and codex.SPELL_CASTING_SETS[spell.english]
         if predefined_sets then
-           for i = #predefined_sets, 1, -1 do
+            for i = #predefined_sets, 1, -1 do
                 set_names:append(predefined_sets[i])
             end
         end
 
         local base_predefined_sets = base_name and base_name ~= spell.english and codex.SPELL_CASTING_SETS[base_name]
         if base_predefined_sets then
-           for i = #base_predefined_sets, 1, -1 do
+            for i = #base_predefined_sets, 1, -1 do
                 set_names:append(base_predefined_sets[i])
             end
         end
@@ -598,9 +821,13 @@ function get_sets()
     _weapons = sets.get_weapons()
     log.debug("Loaded weapons.")
 
-    if autoloader.lockstyle then
-        windower.send_command("wait 1;input /lockstyleset " .. autoloader.lockstyle)
+    if autoloader.macro_book then
+        windower.send_command(("wait1;input /macro book %s;wait1;input /macro set 1"):format(autoloader.macro_book))
     end
+    if autoloader.lockstyle then
+        windower.send_command("wait1;input /lockstyleset " .. autoloader.lockstyle)
+    end
+
     windower.send_command("wait 1;input //gs c status_refresh")
 
     utils.call_hook("after_get_sets", autoloader.stub_after_get_sets)
@@ -670,6 +897,9 @@ before_file_unload = autoloader.stub_before_file_unload
 function file_unload()
     utils.call_hook("before_file_unload", autoloader.stub_before_file_unload)
 
+    --Unload polls
+    poll.clear()
+
     -- Unbind keybinds
     if next(_keybinds) ~= nil then
         for key, bind in pairs(_keybinds) do
@@ -691,27 +921,30 @@ local function handle_log_command(cmd)
 end
 
 local function handle_idle_command(cmd)
-    if cmd and cmd ~= "" then
+    cmd = cmd and cmd:lower()
+    if cmd and cmd ~= "cycle" and cmd ~= "cycle back" and cmd ~= "cycleback" then
         autoloader.set_idle_mode(cmd)
         return
     end
-    cycle_idle_mode()
+
+    cycle_idle_mode(cmd and (cmd == "cycle back" or cmd == "cycleback"))
 end
 
 local function handle_melee_command(cmd)
-    if cmd and cmd ~= "" then
+    if cmd and cmd ~= "cycle" and cmd ~= "cycle back" and cmd ~= "cycleback" then
         autoloader.set_melee_mode(cmd)
         return
     end
-    cycle_melee_mode()
+
+    cycle_melee_mode(cmd and (cmd == "cycle back" or cmd == "cycleback"))
 end
 
 local function handle_magic_command(cmd)
-    if cmd and cmd ~= "" then
+    if cmd and cmd ~= "cycle" and cmd ~= "cycle back" and cmd ~= "cycleback" then
         autoloader.set_magic_mode(cmd)
         return
     end
-    cycle_magic_mode()
+    cycle_magic_mode(cmd and (cmd == "cycle back" or cmd == "cycleback"))
 end
 
 local function handle_weapon_command(cmd)
@@ -742,6 +975,15 @@ local function handle_movement_command(cmd)
         return
     else
         cycle_movement_mode()
+    end
+end
+
+local function handle_exp_command(cmd)
+    if cmd then
+        autoloader.set_exp_mode(cmd)
+        return
+    else
+        cycle_exp_mode()
     end
 end
 
@@ -861,6 +1103,8 @@ function self_command(cmd)
             handle_weapon_command(rest2)
         elseif a2 == "movement" then
             handle_movement_command(rest2)
+        elseif a2 == "exp" then
+            handle_exp_command(rest2)
         elseif a2 == "help" then
             handle_help_command(rest2)
         elseif a2 == "status_refresh" then
